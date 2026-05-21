@@ -1,4 +1,4 @@
-import{f as a}from"./index-BOtUXETK.js";/**
+import{f as a}from"./index-CPWSgneM.js";/**
  * @license lucide-react v0.417.0 - ISC
  *
  * This source code is licensed under the ISC license.
