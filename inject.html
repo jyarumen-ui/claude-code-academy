@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>設定注入</title>
+<style>body{font-family:sans-serif;background:#0a0a0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}</style>
+</head>
+<body>
+<div id="msg" style="text-align:center;font-size:1.2rem;">⏳ 設定を注入中...</div>
+<script>
+const persona = {
+  genre: "AI×副業・リアル体験談",
+  target: "借金・生活苦から逆転を目指す人・副業でXを0から伸ばしたい初心者",
+  tone: "親しみやすい",
+  strengths: "借金1500万→AI×Xに全賭け・月収80万への逆転ドキュメント・2025年12月X開始・失敗も全公開のリアル発信",
+  goal: "フォロワー獲得"
+};
+const xAccountStyle = {
+  url: "https://x.com/madao_gekokujoo",
+  posts: "アカウントキャラクター:\n・借金1500万の底辺→AI×Xに全賭け・月収80万への逆転ドキュメント\n・リアルな失敗・成功を包み隠さず発信するスタイル\n・2025年12月開始・1127ポスト・374フォロワー",
+  savedAt: new Date().toISOString()
+};
+
+try {
+  localStorage.setItem("namaiki_persona", JSON.stringify(persona));
+  localStorage.setItem("namaiki_x_account_style", JSON.stringify(xAccountStyle));
+  document.getElementById("msg").innerHTML = "✅ ペルソナ・Xアカウント設定完了！<br><small>APIキーは設定画面から1度入力してください。<br>3秒後にアプリへ移動します...</small>";
+  setTimeout(() => { location.href = "./index.html#/x-marketing"; }, 3000);
+} catch(e) {
+  document.getElementById("msg").innerHTML = "❌ エラー: " + e.message;
+}
+</script>
+</body>
+</html>
