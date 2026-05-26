@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/claude-code-academy/sw.js', { scope: '/claude-code-academy/' })})}
