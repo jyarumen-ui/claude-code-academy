@@ -16,15 +16,13 @@ jobs:
           node-version: '22'
 
       - name: 依存パッケージインストール
-        run: npm install twitter-api-v2 @supabase/supabase-js
+        run: npm install @supabase/supabase-js
         working-directory: .github/workflows
 
-      - name: X 自動投稿スクリプト実行
+      - name: 自動投稿スクリプト実行（Typefully経由でX/Threads）
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          X_API_KEY: ${{ secrets.X_API_KEY }}
-          X_API_SECRET: ${{ secrets.X_API_SECRET }}
-          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
-          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          TYPEFULLY_API_KEY: ${{ secrets.TYPEFULLY_API_KEY }}
+          TYPEFULLY_SOCIAL_SET_ID: ${{ secrets.TYPEFULLY_SOCIAL_SET_ID }}
         run: node .github/workflows/post-to-x.js

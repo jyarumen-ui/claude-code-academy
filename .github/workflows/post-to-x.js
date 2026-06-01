@@ -1,4 +1,3 @@
-const { TwitterApi } = require('twitter-api-v2')
 const { createClient } = require('@supabase/supabase-js')
 
 const supabase = createClient(
@@ -7,50 +6,72 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 )
 
-const twitter = new TwitterApi({
-  appKey: process.env.X_API_KEY,
-  appSecret: process.env.X_API_SECRET,
-  accessToken: process.env.X_ACCESS_TOKEN,
-  accessSecret: process.env.X_ACCESS_TOKEN_SECRET,
-})
+// Supabaseからアカウント認証情報を取得（Typefullyキーをアカウント単位で持てる）
+async function loadAccounts() {
+  const { data, error } = await supabase.from('accounts').select('*')
+  if (error) { console.warn('accounts table read error:', error.message); return [] }
+  return data ?? []
+}
+
+// アカウントIDから Typefully 認証情報を解決（Supabase優先 → 環境変数フォールバック）
+function resolveTypefully(accountId, accounts) {
+  const acc = accounts.find(a => a.id === accountId)
+  if (acc?.typefully_api_key) {
+    return { apiKey: acc.typefully_api_key, socialSetId: acc.typefully_social_set_id }
+  }
+  return { apiKey: process.env.TYPEFULLY_API_KEY, socialSetId: process.env.TYPEFULLY_SOCIAL_SET_ID }
+}
+
+// Typefully 経由で X / Threads に即時投稿（X APIは使わない）
+async function publishViaTypefully(apiKey, socialSetId, text, { needsX, needsThreads }) {
+  if (!apiKey || !socialSetId) throw new Error('Typefully未設定（apiKey / socialSetId）')
+
+  const platforms = {}
+  if (needsX) platforms.x = { enabled: true, posts: [{ text }] }
+  if (needsThreads) platforms.threads = { enabled: true, posts: [{ text }] }
+  if (Object.keys(platforms).length === 0) throw new Error('投稿先プラットフォームが未指定')
+
+  const res = await fetch(`https://api.typefully.com/v2/social-sets/${socialSetId}/drafts`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ platforms, publish_at: 'now' }),
+  })
+  if (!res.ok) { const e = await res.text(); throw new Error(`Typefully ${res.status}: ${e}`) }
+  return await res.json()
+}
 
 async function main() {
   const now = new Date().toISOString()
+  const accounts = await loadAccounts()
+  console.log(`アカウント数: ${accounts.length}件`)
 
-  // 投稿時刻を過ぎた予約済み投稿を取得
   const { data: posts, error } = await supabase
-    .from('scheduled_posts')
-    .select('*')
-    .eq('status', 'scheduled')
-    .lte('scheduled_at', now)
-    .in('platform', ['x', 'both'])
-    .order('scheduled_at', { ascending: true })
-    .limit(10)
+    .from('scheduled_posts').select('*')
+    .eq('status', 'scheduled').lte('scheduled_at', now)
+    .order('scheduled_at', { ascending: true }).limit(20)
 
   if (error) { console.error('Supabase error:', error); process.exit(1) }
   if (!posts || posts.length === 0) { console.log('投稿なし'); return }
-
-  console.log(`${posts.length}件を投稿します`)
+  console.log(`${posts.length}件を処理します`)
 
   for (const post of posts) {
+    const needsX = post.platform === 'x' || post.platform === 'both'
+    const needsThreads = post.platform === 'threads' || post.platform === 'both'
+
     try {
-      const tweet = await twitter.v2.tweet(post.text)
-      console.log(`✅ 投稿成功: ${post.id} tweet_id=${tweet.data.id}`)
-
-      await supabase
-        .from('scheduled_posts')
-        .update({ status: 'posted', posted_at: new Date().toISOString(), tweet_id: tweet.data.id })
+      const { apiKey, socialSetId } = resolveTypefully(post.account_id, accounts)
+      await publishViaTypefully(apiKey, socialSetId, post.text, { needsX, needsThreads })
+      console.log(`✅ 投稿成功: ${post.id} (${post.platform}) account=${post.account_id}`)
+      await supabase.from('scheduled_posts')
+        .update({ status: 'posted', posted_at: new Date().toISOString() })
         .eq('id', post.id)
-
     } catch (e) {
       console.error(`❌ 投稿失敗: ${post.id}`, e.message)
-      await supabase
-        .from('scheduled_posts')
-        .update({ status: 'error', error_message: e.message })
+      await supabase.from('scheduled_posts')
+        .update({ status: 'error', error_message: String(e.message) })
         .eq('id', post.id)
     }
 
-    // API レート制限対策で1秒待つ
     await new Promise(r => setTimeout(r, 1000))
   }
 }

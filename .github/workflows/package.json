@@ -2,7 +2,7 @@
   "name": "x-auto-poster",
   "version": "1.0.0",
   "dependencies": {
-    "twitter-api-v2": "^1.18.0",
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.106.2",
+    "twitter-api-v2": "^1.18.0"
   }
 }
