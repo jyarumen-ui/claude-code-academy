@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Map, Smartphone, GraduationCap,
-  BookMarked, Users, ChevronRight, Lock, CheckCircle2, Baby, Scale, Zap,
+  BookMarked, Users, ChevronRight, Lock, CheckCircle2, Baby, Scale, Zap, Twitter,
 } from 'lucide-react'
 import { useUserStore } from '../../stores/userStore'
 import { useProgressStore } from '../../stores/progressStore'
@@ -17,6 +17,7 @@ export function Sidebar() {
   const mainNav = [
     { to: '/', icon: Home, label: 'ホーム' },
     { to: '/guide', icon: Baby, label: '🔰 初心者ガイド', highlight: true },
+    { to: '/x-marketing', icon: Twitter, label: '🐦 X支援', highlight: false },
     { to: '/skills', icon: Zap, label: '⚡ SKILLライブラリ', highlight: false },
     { to: '/tools', icon: Scale, label: '⚖️ ツール比較', highlight: false },
     { to: '/roadmap', icon: Map, label: 'ロードマップ' },

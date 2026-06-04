@@ -1,0 +1,35 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "nickname": "�e�X�g���[�U�[",
+      "email": "test@example.com",
+      "password": "$2a$10$Y2Km.Xs5iXum0Poq06zFLuavtAXbx.dadRt9Sef/NcybXd9ZZ8yg6",
+      "createdAt": "2026-05-13T23:00:50.043Z"
+    }
+  ],
+  "progress": [
+    {
+      "userId": 1,
+      "data": {
+        "levels": {},
+        "badges": [],
+        "totalStudyMinutes": 30
+      },
+      "updatedAt": "2026-05-13T23:01:08.122Z"
+    }
+  ],
+  "posts": [
+    {
+      "id": 1,
+      "userId": 1,
+      "content": "�e�X�g���e�I",
+      "category": "tip",
+      "likes": 0,
+      "likedBy": [],
+      "createdAt": "2026-05-13T23:01:08.232Z"
+    }
+  ],
+  "nextUserId": 2,
+  "nextPostId": 2
+}
