@@ -16,10 +16,10 @@ async function loadAccounts() {
 // アカウントIDから Typefully 認証情報を解決（Supabase優先 → 環境変数フォールバック）
 function resolveTypefully(accountId, accounts) {
   const acc = accounts.find(a => a.id === accountId)
-  if (acc?.typefully_api_key) {
-    return { apiKey: acc.typefully_api_key, socialSetId: acc.typefully_social_set_id }
-  }
-  return { apiKey: process.env.TYPEFULLY_API_KEY, socialSetId: process.env.TYPEFULLY_SOCIAL_SET_ID }
+  // アカウント固有のソーシャルセットを優先し、APIキーは環境変数で補完（複数アカウントが各自の投稿先へ出るように）
+  const apiKey = (acc && acc.typefully_api_key) || process.env.TYPEFULLY_API_KEY
+  const socialSetId = (acc && acc.typefully_social_set_id) || process.env.TYPEFULLY_SOCIAL_SET_ID
+  return { apiKey, socialSetId }
 }
 
 // Typefully 経由で X / Threads に即時投稿（X APIは使わない）
