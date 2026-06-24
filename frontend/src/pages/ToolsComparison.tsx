@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Scale, CheckCircle2, XCircle, MinusCircle, GitMerge, TrendingUp, AlertTriangle } from 'lucide-react'
 import { TOOLS, COMPARE_ROWS, PARALLEL_USE, type ToolInfo } from '../data/toolsData'
@@ -151,7 +151,7 @@ export function ToolsComparison() {
                         <td key={j} className="px-3 py-3 text-center">
                           <div className="flex items-center justify-center gap-1.5">
                             <GoodBadIcon good={cell.good} />
-                            <span className="text-gray-300 text-xs">{cell.value.replace(/[✅❌⭐⚠️]/g, '').trim()}</span>
+                            <span className="text-gray-300 text-xs">{cell.value.replace(/\p{Emoji}/gu, '').trim()}</span>
                           </div>
                         </td>
                       ))}

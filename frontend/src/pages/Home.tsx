@@ -1,18 +1,26 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Zap, ArrowRight, BookOpen, Smartphone, Users, Star, ChevronRight, Baby } from 'lucide-react'
+import { Zap, ArrowRight, BookOpen, Smartphone, Users, Star, ChevronRight, Baby, Clock, Flame, Trophy, CheckCircle2 } from 'lucide-react'
 import { CURRICULUM } from '../data/curriculum'
 import { useProgressStore } from '../stores/progressStore'
 
 /** ホームページ */
 export function Home() {
-  const { levels } = useProgressStore()
+  const { levels, totalStudyMinutes, currentStreak, badges } = useProgressStore()
 
   // 直近のアンロック済みレベルを探す
   const nextLevel = CURRICULUM.find((lv) => {
     const p = levels[lv.id]
     return p?.unlocked && !p.completed
   }) ?? CURRICULUM[0]
+
+  // 進捗集計
+  const completedLessons = Object.values(levels).reduce(
+    (sum, lv) => sum + Object.values(lv.lessonsProgress).filter((l) => l.completed).length,
+    0,
+  )
+  const unlockedLevels = Object.values(levels).filter((lv) => lv.unlocked).length
+  const hasProgress = completedLessons > 0 || totalStudyMinutes > 0
 
   const features = [
     { icon: BookOpen, title: '7段階ロードマップ', desc: '完全初心者からAgent Teams上級者まで段階的に学習', color: '#0ea5e9' },
@@ -57,6 +65,76 @@ export function Home() {
           </Link>
         </div>
       </motion.div>
+
+      {/* 進捗ダッシュボード（学習開始済みの場合のみ表示） */}
+      {hasProgress && (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <h2 className="section-title mb-4">📊 あなたの学習進捗</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* 学習時間 */}
+            <div className="card flex flex-col items-center gap-2 py-4">
+              <Clock size={22} className="text-blue-400" />
+              <p className="text-2xl font-bold text-white">
+                {totalStudyMinutes >= 60
+                  ? `${Math.floor(totalStudyMinutes / 60)}h${totalStudyMinutes % 60}m`
+                  : `${totalStudyMinutes}m`}
+              </p>
+              <p className="text-xs text-gray-500">総学習時間</p>
+            </div>
+
+            {/* 連続学習 */}
+            <div className="card flex flex-col items-center gap-2 py-4">
+              <Flame size={22} className={currentStreak > 0 ? 'text-orange-400' : 'text-gray-600'} />
+              <p className="text-2xl font-bold text-white">{currentStreak}</p>
+              <p className="text-xs text-gray-500">連続学習日</p>
+            </div>
+
+            {/* 完了レッスン */}
+            <div className="card flex flex-col items-center gap-2 py-4">
+              <CheckCircle2 size={22} className="text-emerald-400" />
+              <p className="text-2xl font-bold text-white">{completedLessons}</p>
+              <p className="text-xs text-gray-500">完了レッスン</p>
+            </div>
+
+            {/* 獲得バッジ */}
+            <div className="card flex flex-col items-center gap-2 py-4">
+              <Trophy size={22} className={badges.length > 0 ? 'text-yellow-400' : 'text-gray-600'} />
+              <p className="text-2xl font-bold text-white">{badges.length}</p>
+              <p className="text-xs text-gray-500">獲得バッジ</p>
+            </div>
+          </div>
+
+          {/* アンロック済みレベル進捗バー */}
+          <div className="mt-3 card">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-gray-300">レベル解放状況</p>
+              <p className="text-xs text-gray-500">{unlockedLevels} / {CURRICULUM.length} 解放済み</p>
+            </div>
+            <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-brand-500 to-purple-500 rounded-full transition-all duration-700"
+                style={{ width: `${(unlockedLevels / CURRICULUM.length) * 100}%` }}
+              />
+            </div>
+            {badges.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {badges.slice(0, 5).map((b) => (
+                  <span key={b.id} title={b.title} className="text-xl" aria-label={b.title}>
+                    {b.emoji}
+                  </span>
+                ))}
+                {badges.length > 5 && (
+                  <span className="text-xs text-gray-500 self-center">+{badges.length - 5}</span>
+                )}
+              </div>
+            )}
+          </div>
+        </motion.section>
+      )}
 
       {/* ヒーロー */}
       <motion.section

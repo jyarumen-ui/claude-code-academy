@@ -4,12 +4,76 @@ import {
   loadKnowledge, addKnowledge, deleteKnowledge,
   CATEGORY_LABELS, type Knowledge, type KnowledgeCategory,
 } from '../../utils/knowledgeStore'
+import { getActiveAccountId } from '../../utils/accountStore'
 
 const CATEGORIES = Object.entries(CATEGORY_LABELS) as [KnowledgeCategory, string][]
 
-/** サブ機能①：教材ナレッジベース管理 */
+function renderContent(content: string) {
+  const lines = content.split('\n')
+  const elements: React.ReactNode[] = []
+  let listBuffer: string[] = []
+
+  const flushList = (key: string) => {
+    if (listBuffer.length === 0) return
+    elements.push(
+      <ul key={key} className="space-y-1 pl-1">
+        {listBuffer.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-gray-300 text-xs leading-relaxed">
+            <span className="text-brand-400 mt-0.5 shrink-0">•</span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    )
+    listBuffer = []
+  }
+
+  lines.forEach((line, i) => {
+    if (line.startsWith('## ')) {
+      flushList(`list-${i}`)
+      const text = line.slice(3)
+      const isGood = text.includes('✅') || text.includes('正解')
+      const isBad  = text.includes('❌') || text.includes('NG')
+      const isTemp = text.includes('テンプレ') || text.includes('チェック')
+      const isQuote = text.includes('Discord') || text.includes('講師')
+      elements.push(
+        <div key={i} className={`flex items-center gap-2 pt-2 pb-1 border-b ${
+          isGood ? 'border-green-500/30' : isBad ? 'border-red-500/30' : isTemp ? 'border-yellow-500/30' : isQuote ? 'border-purple-500/30' : 'border-sky-500/30'
+        }`}>
+          <span className={`text-xs font-bold ${
+            isGood ? 'text-green-400' : isBad ? 'text-red-400' : isTemp ? 'text-yellow-400' : isQuote ? 'text-purple-400' : 'text-sky-400'
+          }`}>{text}</span>
+        </div>
+      )
+    } else if (line.startsWith('### ')) {
+      flushList(`list-${i}`)
+      elements.push(<p key={i} className="text-gray-300 text-xs font-bold mt-1">{line.slice(4)}</p>)
+    } else if (line.startsWith('- ') || line.startsWith('・')) {
+      listBuffer.push(line.replace(/^[-・]\s?/, ''))
+    } else if (line.startsWith('✅') || line.startsWith('❌') || line.startsWith('⚠') || line.startsWith('📌')) {
+      flushList(`list-${i}`)
+      const isGood = line.startsWith('✅')
+      elements.push(
+        <p key={i} className={`text-xs leading-relaxed px-3 py-2 rounded-lg ${
+          isGood ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'
+        }`}>{line}</p>
+      )
+    } else if (line.trim() === '') {
+      flushList(`list-${i}`)
+      elements.push(<div key={i} className="h-1" />)
+    } else if (line.trim()) {
+      flushList(`list-${i}`)
+      elements.push(<p key={i} className="text-gray-300 text-xs leading-relaxed">{line}</p>)
+    }
+  })
+  flushList('final')
+  return elements
+}
+
+/** 教材ナレッジベース */
 export function KnowledgeBase() {
-  const [items, setItems] = useState<Knowledge[]>(loadKnowledge)
+  const accId = getActiveAccountId()
+  const [items, setItems] = useState<Knowledge[]>(() => loadKnowledge(accId))
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState<KnowledgeCategory>('profile')
   const [content, setContent] = useState('')
@@ -21,19 +85,19 @@ export function KnowledgeBase() {
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) return
-    addKnowledge({ title, category, content })
-    setItems(loadKnowledge())
+    addKnowledge({ title, category, content }, accId)
+    setItems(loadKnowledge(accId))
     setTitle(''); setContent(''); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
   const handleDelete = (id: string) => {
-    deleteKnowledge(id)
-    setItems(loadKnowledge())
+    deleteKnowledge(id, accId)
+    setItems(loadKnowledge(accId))
   }
 
   const handleExport = () => {
-    const data = JSON.stringify(loadKnowledge(), null, 2)
+    const data = JSON.stringify(loadKnowledge(accId), null, 2)
     const blob = new Blob([data], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -65,6 +129,15 @@ export function KnowledgeBase() {
 
   return (
     <div className="space-y-6">
+
+      {/* AI反映バナー */}
+      <div className="rounded-2xl border border-brand-500/30 bg-brand-500/5 p-3 flex items-start gap-3">
+        <BookOpen size={16} className="text-brand-400 shrink-0 mt-0.5" />
+        <p className="text-brand-300 text-xs leading-relaxed">
+          この教材はポスト生成・プロフ作成・添削など全機能でAIが自動参照します。教材の質が投稿品質に直結します。
+        </p>
+      </div>
+
       {/* 入力フォーム */}
       <div className="rounded-2xl bg-gray-900 border border-gray-700 p-5 space-y-4">
         <div className="flex items-center gap-2 mb-1">
@@ -87,7 +160,7 @@ export function KnowledgeBase() {
         <textarea
           value={content}
           onChange={e => setContent(e.target.value)}
-          placeholder="教材の内容をここにコピペしてください（Discord の添削内容、講師の発言など）"
+          placeholder="教材の内容をここにコピペしてください"
           rows={6}
           className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-brand-500 resize-none"
         />
@@ -105,7 +178,7 @@ export function KnowledgeBase() {
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={handleExport} disabled={items.length === 0}
           className="flex items-center gap-1.5 text-xs text-gray-300 border border-gray-700 hover:border-green-500 hover:text-green-400 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40">
-          <Download size={13} />バックアップ保存（JSON）
+          <Download size={13} />バックアップ保存
         </button>
         <label className="flex items-center gap-1.5 text-xs text-gray-300 border border-gray-700 hover:border-sky-500 hover:text-sky-400 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
           <Upload size={13} />バックアップから復元
@@ -116,18 +189,13 @@ export function KnowledgeBase() {
 
       {/* フィルター */}
       <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${filter === 'all' ? 'border-brand-500 bg-brand-500/20 text-white' : 'border-gray-700 text-gray-400 hover:border-gray-600'}`}
-        >
+        <button onClick={() => setFilter('all')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${filter === 'all' ? 'border-brand-500 bg-brand-500/20 text-white' : 'border-gray-700 text-gray-400 hover:border-gray-600'}`}>
           すべて ({items.length})
         </button>
         {CATEGORIES.map(([k, v]) => (
-          <button
-            key={k}
-            onClick={() => setFilter(k)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${filter === k ? 'border-brand-500 bg-brand-500/20 text-white' : 'border-gray-700 text-gray-400 hover:border-gray-600'}`}
-          >
+          <button key={k} onClick={() => setFilter(k)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${filter === k ? 'border-brand-500 bg-brand-500/20 text-white' : 'border-gray-700 text-gray-400 hover:border-gray-600'}`}>
             {v} ({items.filter(i => i.category === k).length})
           </button>
         ))}
@@ -155,7 +223,9 @@ export function KnowledgeBase() {
                       <span className="text-white font-semibold text-sm">{item.title}</span>
                     </div>
                     {!isOpen && (
-                      <p className="text-gray-400 text-xs line-clamp-2 leading-relaxed">{item.content}</p>
+                      <p className="text-gray-500 text-xs line-clamp-2 leading-relaxed">
+                        {item.content.replace(/#+\s/g, '').slice(0, 120)}…
+                      </p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -169,13 +239,13 @@ export function KnowledgeBase() {
                   </div>
                 </div>
                 {isOpen && (
-                  <div className="px-4 pb-4 border-t border-gray-800">
-                    <pre className="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap font-sans mt-3">
-                      {item.content}
-                    </pre>
+                  <div className="px-4 pb-5 border-t border-gray-800">
+                    <div className="mt-4 space-y-2">
+                      {renderContent(item.content)}
+                    </div>
                     {item.sourceUrl && (
                       <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer"
-                        className="text-brand-400 text-xs hover:underline mt-2 inline-block">
+                        className="text-brand-400 text-xs hover:underline mt-3 inline-block">
                         ソース →
                       </a>
                     )}
